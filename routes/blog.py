@@ -1,7 +1,9 @@
 from fastapi import APIRouter
-from models.blog import BlogModel
+from models.blog import BlogModel,UpdateBlogModel
 from config.config import blogs_collection
+from serializers.blog import decodeBlogs,decodeBlog
 import datetime
+from bson import ObjectId
 
 blog_root = APIRouter()
 
@@ -18,4 +20,51 @@ def NewBlog(doc:BlogModel ):
         "status": "ok",
         "message": "block posted successfully",
         "_id" : doc_id
+    }
+
+#getting blogs
+@blog_root.get("/all/blogs")
+def AllBlogs():
+    res = blogs_collection.find()
+    decoded_data = decodeBlogs(res)
+
+    return {
+        "status":"ok",
+        "data" : decoded_data
+    }
+
+@blog_root.get("/blog/{_id}")
+def GetBlog(_id:str):
+
+    res = blogs_collection.find_one({"_id" : ObjectId(_id)})
+
+    decode_Blog = decodeBlog(res)
+
+    return{
+        "status": "ok",
+        "data": decode_Blog
+    }
+
+@blog_root.patch("/update/{_id}")
+def UpdateBlog(_id:str,doc:UpdateBlogModel):
+    req = dict(doc.model_dump(exclude_unset=True))
+
+    blogs_collection.find_one_and_update(
+        {"_id":ObjectId(_id)},
+        {"$set" : req}
+    )
+    return {
+        "status":"ok",
+        "message" : "blogging update susccefully"
+    }
+
+@blog_root.delete("/delete/{_id}")
+def DeleteBlog(_id:str):
+    blogs_collection.find_one_and_delete(
+        {"_id":ObjectId(_id)},
+    )
+
+    return {
+        "status": "ok",
+        "message": "Blog deleted succesfully"
     }
